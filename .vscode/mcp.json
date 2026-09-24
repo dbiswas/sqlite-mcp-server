@@ -1,0 +1,14 @@
+{
+  "servers": {
+    "localSqlite": {
+      "type": "stdio",
+      "command": "python",
+      "args": [
+        "${workspaceFolder}/mcp-servers/sqlite-mcp/server.py"
+      ],
+      "env": {
+        "SQLITE_DB_PATH": "${workspaceFolder}/mcp-servers/sqlite-mcp/data/local.db"
+      }
+    }
+  }
+}

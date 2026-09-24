@@ -24,8 +24,12 @@ A [FastMCP](https://github.com/modelcontextprotocol/python-sdk) server that expo
 
 ```bash
 cd mcp-servers/sqlite-mcp
-pip install -r requirements.txt
+python install_dependencies.py
 ```
+
+The installer creates `.venv`, tries Microsoft's package-feed proxy before public PyPI, and verifies every artifact against the hashes in `requirements.txt`. This avoids the `files.pythonhosted.org` block on Microsoft-managed networks. Use `--index-url` to supply another organization-approved feed.
+
+Python 3.13.15 is pinned in `.python-version` and `pyproject.toml`. Direct dependencies are declared with exact versions in `pyproject.toml`, and every transitive dependency is pinned with artifact hashes in `requirements.txt`. Do not edit the generated requirements file manually.
 
 ---
 

@@ -30,7 +30,7 @@ The client starts the server when it is needed. The server uses `stdio`, so it d
 
 ## What you need
 
-- Python 3.10 or newer
+- Python 3.13.15
 - SQLite (the command-line program is useful for checking the database)
 - An MCP-compatible client, such as Claude Desktop or VS Code with GitHub Copilot
 - Git, if you want to clone this repository
@@ -42,19 +42,17 @@ Python already includes the `sqlite3` library used by this server. Installing th
 Clone the repository, or download it as a ZIP file from GitHub and extract it.
 
 ```bash
-git clone <repository-url>
-cd building-local-sqlite-mcp/mcp-servers/sqlite-mcp
+git clone dbiswas/sqlite-mcp-server
+cd sqlite-mcp-server/mcp-servers/sqlite-mcp
 ```
 
 Replace `<repository-url>` with this repository's GitHub URL.
 
 All remaining terminal commands should be run from the `mcp-servers/sqlite-mcp` directory unless a step says otherwise.
 
-## Step 2: Install Python
+## Step 2: Install the locked Python version
 
-Download Python from [python.org](https://www.python.org/downloads/) and install Python 3.10 or newer.
-
-On Windows, select **Add Python to PATH** during installation.
+Download and install Python 3.13.15 from [python.org](https://www.python.org/downloads/). On Windows, select **Add Python to PATH** during installation.
 
 Check the installation:
 
@@ -62,7 +60,7 @@ Check the installation:
 python --version
 ```
 
-On macOS or Linux, use `python3 --version` if the `python` command is not available.
+The result must be `Python 3.13.15`. The same version is recorded in `.python-version` and required by `pyproject.toml`. Using the same Python patch release removes another source of differences between machines.
 
 ## Step 3: Install SQLite
 
@@ -110,47 +108,52 @@ sqlite3 --version
 
 If this command is not found, reopen the terminal and try again. The MCP server can still work through Python's built-in `sqlite3` library even when the SQLite command-line program is not installed.
 
-## Step 4: Create a Python virtual environment
+## Step 4: Create the virtual environment and install dependencies
 
-A virtual environment keeps this project's packages separate from other Python projects.
-
-### Windows PowerShell
-
-```powershell
-python -m venv .venv
-.\.venv\Scripts\Activate.ps1
-```
-
-If PowerShell blocks the activation script, you can continue without activating it and replace `python` in the next commands with `.\.venv\Scripts\python.exe`.
-
-### macOS or Linux
+Run the included bootstrap installer:
 
 ```bash
-python3 -m venv .venv
-source .venv/bin/activate
+python install_dependencies.py
 ```
 
-After activation, your terminal normally shows `(.venv)` at the start of the prompt.
+The installer creates `.venv`, enforces every package hash in `requirements.txt`, and chooses a reachable package source without changing the lock:
 
-## Step 5: Install FastMCP and Pydantic
+1. It first uses Microsoft's package-feed proxy, avoiding the `files.pythonhosted.org` domain blocked on Microsoft-managed networks.
+2. If that proxy is unavailable, it falls back to public PyPI for users on other networks.
 
-Upgrade `pip`, and then install the dependencies listed in `requirements.txt`:
+It also ignores a globally set `PIP_NO_INDEX` value for this installation because it supplies an explicit package index. To force a specific approved index instead of automatic selection, run:
 
 ```bash
-python -m pip install --upgrade pip
-python -m pip install -r requirements.txt
+python install_dependencies.py --index-url https://your-approved-index.example/simple/
 ```
 
-The two core dependencies are:
+## Step 5: Verify the locked environment
+
+The two direct dependencies are:
 
 - `mcp[cli]`, which provides the FastMCP server framework and development tools
 - `pydantic`, which validates every tool input before a database operation runs
 
-Check that both packages can be imported:
+Their exact versions and all transitive dependencies are pinned with artifact hashes in `requirements.txt`. Activate the environment created in Step 4:
+
+```powershell
+# Windows PowerShell
+.\.venv\Scripts\Activate.ps1
+```
 
 ```bash
-python -c "from mcp.server.fastmcp import FastMCP; import pydantic; print('Dependencies are ready')"
+# macOS or Linux
+source .venv/bin/activate
 ```
+
+Verify the environment:
+
+```bash
+python --version
+python -c "from importlib.metadata import version; print('mcp:', version('mcp')); print('pydantic:', version('pydantic'))"
+```
+
+Do not run `pip freeze` to update this project. Follow the maintenance instructions below so `pyproject.toml` and `requirements.txt` remain synchronized.
 
 ## Step 6: Understand the server file
 
@@ -459,11 +462,25 @@ This direct SQL step is only for checking the result. Normal users can perform t
 
 ### `ModuleNotFoundError: No module named 'mcp'`
 
-The client is probably using a different Python installation. Point `command` to `.venv` as shown in Step 10, and reinstall the packages:
+The client is probably using a different Python installation. Point `command` to `.venv` as shown in Step 10, and rerun the installer:
 
 ```bash
-python -m pip install -r requirements.txt
+python install_dependencies.py
 ```
+
+### pip reports a hash or dependency error
+
+Restore `pyproject.toml` and `requirements.txt` from the same repository revision, confirm that Python 3.13.15 is active, and retry. Do not remove `--require-hashes`, because doing so weakens the reproducibility and integrity checks.
+
+### Windows Security blocks `files.pythonhosted.org`
+
+Use the included installer instead of a plain `pip install` command:
+
+```bash
+python install_dependencies.py
+```
+
+It uses `https://packagefeedproxy.microsoft.io/pypi/simple/` first, so package downloads stay on the Microsoft-approved route. Hash verification remains enabled. If your organization provides a different approved Python feed, pass it with `--index-url`.
 
 ### The server uses the wrong database
 
@@ -480,6 +497,22 @@ Close other programs that may be editing the same database, including an open `s
 - Restart the server after changing `server.py`.
 - In VS Code, run **MCP: Reset Cached Tools** if an old tool list is still shown.
 
+## Maintaining dependency locks
+
+Normal users should not modify dependency files. When a maintainer intentionally upgrades a dependency:
+
+1. Edit the requested version in `pyproject.toml`.
+2. Install [uv](https://docs.astral.sh/uv/getting-started/installation/) and regenerate the complete cross-platform lock:
+
+   ```bash
+   uv pip compile pyproject.toml --universal --generate-hashes --output-file requirements.txt
+   ```
+
+3. Run the verification commands from Step 5 and test the server.
+4. Commit `pyproject.toml` and `requirements.txt` together.
+
+The lock makes installs reproducible for the supported Python version and platforms for which the packages publish compatible artifacts. It cannot compensate for unsupported operating systems or unavailable platform-specific package builds.
+
 ## Project structure
 
 ```text
@@ -487,7 +520,10 @@ building-local-sqlite-mcp/
 ├── README.md
 └── mcp-servers/
     └── sqlite-mcp/
+        ├── .python-version
         ├── README.md
+        ├── install_dependencies.py
+        ├── pyproject.toml
         ├── requirements.txt
         ├── server.py
         └── data/
