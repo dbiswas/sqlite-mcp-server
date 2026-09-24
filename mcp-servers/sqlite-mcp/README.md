@@ -35,7 +35,7 @@ Python 3.13.15 is pinned in `.python-version` and `pyproject.toml`. Direct depen
 
 ## Configuration
 
-Set the database path via environment variable:
+By default, the server uses `data/local.db` next to `server.py` (the repository path is `mcp-servers/sqlite-mcp/data/local.db`). You can override it with the `SQLITE_DB_PATH` environment variable:
 
 ```bash
 # Windows PowerShell
@@ -45,7 +45,7 @@ $env:SQLITE_DB_PATH = "C:\path\to\your\database.db"
 set SQLITE_DB_PATH=C:\path\to\your\database.db
 ```
 
-Defaults to `morning_briefing.db` in the working directory if unset.
+If `SQLITE_DB_PATH` is unset, the default is resolved relative to `server.py`, so it does not change with the process working directory.
 
 ---
 
@@ -89,7 +89,7 @@ Add to `.vscode/mcp.json` in your workspace:
       "command": "python",
       "args": ["${workspaceFolder}/mcp-servers/sqlite-mcp/server.py"],
       "env": {
-        "SQLITE_DB_PATH": "${workspaceFolder}/morning_briefing.db"
+        "SQLITE_DB_PATH": "${workspaceFolder}/mcp-servers/sqlite-mcp/data/local.db"
       }
     }
   }

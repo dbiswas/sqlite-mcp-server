@@ -211,7 +211,7 @@ Get the full path of the current directory:
 pwd
 ```
 
-Append `data/local.db` to that path. You will use this absolute database path in the client configuration. If `SQLITE_DB_PATH` is not set, the server uses `morning_briefing.db` in its working directory.
+Append `data/local.db` to that path. The repository's database now lives at `mcp-servers/sqlite-mcp/data/local.db`. You will use this absolute database path in the client configuration. If `SQLITE_DB_PATH` is not set, the server uses that same location, resolved relative to `server.py`.
 
 ## Step 8: Test the server
 
@@ -224,7 +224,7 @@ python server.py
 The terminal should show a message similar to:
 
 ```text
-Starting sqlite_mcp server — DB: morning_briefing.db
+Starting sqlite_mcp server — DB: ...\mcp-servers\sqlite-mcp\data\local.db
 ```
 
 The command then waits silently for an MCP client. This is normal. Press `Ctrl+C` to stop this manual test.

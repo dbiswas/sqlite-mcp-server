@@ -42,7 +42,8 @@ _load_dotenv()
 logging.basicConfig(level=logging.INFO, stream=__import__("sys").stderr)
 log = logging.getLogger("sqlite_mcp")
 
-DB_PATH = os.environ.get("SQLITE_DB_PATH", "morning_briefing.db")
+DEFAULT_DB_PATH = Path(__file__).resolve().parent / "data" / "local.db"
+DB_PATH = Path(os.environ.get("SQLITE_DB_PATH", DEFAULT_DB_PATH)).expanduser()
 
 mcp = FastMCP("sqlite_mcp")
 
